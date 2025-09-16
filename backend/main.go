@@ -7,13 +7,13 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
-//go:embed all:assets/frontend/dist
+//go:embed frontend/dist/*
 var assets embed.FS
 
 func mustDB() *sql.DB {
@@ -28,14 +28,18 @@ func mustDB() *sql.DB {
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
+	if err := ensureSchema(db); err != nil {
+		log.Fatal(err)
+	}
 	return db
 }
 
 func main() {
+	_ = pq.Array
 	db := mustDB()
 	app := NewApp(db)
 
-	err := wails.Run(&options.App{
+	appOptions := &options.App{
 		Title:  "Todo App",
 		Width:  1200,
 		Height: 800,
@@ -43,14 +47,19 @@ func main() {
 			app.startup(ctx)
 		},
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets:  assets,
+			Handler: nil,
 		},
-		Bind: []interface{}{app},
+		Bind: []interface{}{
+			app,
+		},
 		Debug: options.Debug{
-			OpenInspectorOnStartup: true,
+			OpenInspectorOnStartup: false,
 		},
 		WindowStartState: options.Normal,
-	})
+	}
+
+	err := wails.Run(appOptions)
 	if err != nil {
 		log.Fatal(err)
 	}

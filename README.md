@@ -67,3 +67,12 @@ git remote add origin https://github.com/nurmuhamm8d/todo-app.git
 
 git push -u origin main
 
+Альтернатива через GitHub CLI:
+gh repo create nurmuhamm8d/todo-app --public --source=. --remote=origin --push
+
+
+## Лицензия
+MIT
+
+
+Публикация через GitHub CLI и правила игнора подтверждены официальной документацией.
