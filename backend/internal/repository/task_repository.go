@@ -2,7 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"time"
+
 	"todo-app/backend/internal/models"
+
+	"github.com/lib/pq"
 )
 
 type TaskRepository interface {
@@ -45,14 +49,51 @@ func (r *taskRepository) GetAll(userID int64, filter string) ([]models.Task, err
 
 	var res []models.Task
 	for rows.Next() {
-		var t models.Task
-		err := rows.Scan(
-			&t.ID, &t.UserID, &t.Title, &t.Description, &t.Priority, &t.Completed,
-			&t.CreatedAt, &t.DueDate, &t.CompletedAt, &t.RepeatRule, &t.CategoryID, &t.Tags,
+		var (
+			id          int64
+			uID         int64
+			title       string
+			desc        string
+			priority    string
+			completed   bool
+			createdAt   time.Time
+			dueAt       sql.NullTime
+			completedAt sql.NullTime
+			repeatRule  sql.NullString
+			categoryID  sql.NullInt64
+			tags        pq.StringArray
 		)
-		if err != nil {
+		if err := rows.Scan(
+			&id, &uID, &title, &desc, &priority, &completed,
+			&createdAt, &dueAt, &completedAt, &repeatRule, &categoryID, &tags,
+		); err != nil {
 			return nil, err
 		}
+		var t models.Task
+		t.ID = id
+		t.UserID = uID
+		t.Title = title
+		t.Description = desc
+		t.Priority = priority
+		t.Completed = completed
+		t.CreatedAt = createdAt
+		if dueAt.Valid {
+			v := dueAt.Time
+			t.DueDate = &v
+		}
+		if completedAt.Valid {
+			v := completedAt.Time
+			t.CompletedAt = &v
+		}
+		if repeatRule.Valid {
+			v := repeatRule.String
+			t.RepeatRule = &v
+		}
+		if categoryID.Valid {
+			v := categoryID.Int64
+			t.CategoryID = &v
+		}
+		t.Tags = []string(tags)
 		res = append(res, t)
 	}
 	return res, nil
@@ -64,14 +105,51 @@ func (r *taskRepository) GetByID(userID, id int64) (*models.Task, error) {
 		       created_at, due_at, completed_at, repeat_rule, category_id, coalesce(tags, '{}')
 		from tasks where user_id=$1 and id=$2
 	`
-	var t models.Task
-	err := r.db.QueryRow(q, userID, id).Scan(
-		&t.ID, &t.UserID, &t.Title, &t.Description, &t.Priority, &t.Completed,
-		&t.CreatedAt, &t.DueDate, &t.CompletedAt, &t.RepeatRule, &t.CategoryID, &t.Tags,
+	var (
+		tid         int64
+		uID         int64
+		title       string
+		desc        string
+		priority    string
+		completed   bool
+		createdAt   time.Time
+		dueAt       sql.NullTime
+		completedAt sql.NullTime
+		repeatRule  sql.NullString
+		categoryID  sql.NullInt64
+		tags        pq.StringArray
 	)
-	if err != nil {
+	if err := r.db.QueryRow(q, userID, id).Scan(
+		&tid, &uID, &title, &desc, &priority, &completed,
+		&createdAt, &dueAt, &completedAt, &repeatRule, &categoryID, &tags,
+	); err != nil {
 		return nil, err
 	}
+	var t models.Task
+	t.ID = tid
+	t.UserID = uID
+	t.Title = title
+	t.Description = desc
+	t.Priority = priority
+	t.Completed = completed
+	t.CreatedAt = createdAt
+	if dueAt.Valid {
+		v := dueAt.Time
+		t.DueDate = &v
+	}
+	if completedAt.Valid {
+		v := completedAt.Time
+		t.CompletedAt = &v
+	}
+	if repeatRule.Valid {
+		v := repeatRule.String
+		t.RepeatRule = &v
+	}
+	if categoryID.Valid {
+		v := categoryID.Int64
+		t.CategoryID = &v
+	}
+	t.Tags = []string(tags)
 	return &t, nil
 }
 
@@ -81,10 +159,16 @@ func (r *taskRepository) Create(task *models.Task) (*models.Task, error) {
 		values ($1,$2,$3,$4,false,now(),$5,$6,$7,$8)
 		returning id, created_at
 	`
-	err := r.db.QueryRow(q, task.UserID, task.Title, task.Description, task.Priority,
-		task.DueDate, task.RepeatRule, task.CategoryID, task.Tags).
-		Scan(&task.ID, &task.CreatedAt)
-	if err != nil {
+	if err := r.db.QueryRow(q,
+		task.UserID,
+		task.Title,
+		task.Description,
+		task.Priority,
+		task.DueDate,
+		task.RepeatRule,
+		task.CategoryID,
+		pq.Array(task.Tags),
+	).Scan(&task.ID, &task.CreatedAt); err != nil {
 		return nil, err
 	}
 	return task, nil
@@ -96,11 +180,25 @@ func (r *taskRepository) Update(task *models.Task) (*models.Task, error) {
 		where id=$8 and user_id=$9
 		returning created_at, completed, completed_at
 	`
-	err := r.db.QueryRow(q, task.Title, task.Description, task.Priority, task.DueDate,
-		task.RepeatRule, task.CategoryID, task.Tags, task.ID, task.UserID).
-		Scan(&task.CreatedAt, &task.Completed, &task.CompletedAt)
-	if err != nil {
+	var completedAt sql.NullTime
+	if err := r.db.QueryRow(q,
+		task.Title,
+		task.Description,
+		task.Priority,
+		task.DueDate,
+		task.RepeatRule,
+		task.CategoryID,
+		pq.Array(task.Tags),
+		task.ID,
+		task.UserID,
+	).Scan(&task.CreatedAt, &task.Completed, &completedAt); err != nil {
 		return nil, err
+	}
+	if completedAt.Valid {
+		v := completedAt.Time
+		task.CompletedAt = &v
+	} else {
+		task.CompletedAt = nil
 	}
 	return task, nil
 }

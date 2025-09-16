@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/wailsapp/wails/v2/pkg/options/dialog"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -78,19 +79,26 @@ select id, title, priority, completed, created_at, completed_at, due_at
 from tasks
 where user_id = $1
 `
-	args := []any{userID}
 	switch filter {
 	case "active":
 		q += " and completed = false"
 	case "completed":
 		q += " and completed = true"
+	case "overdue":
+		q += " and completed = false and due_at is not null and due_at < now()"
+	case "today":
+		q += " and due_at >= date_trunc('day', now()) and due_at < date_trunc('day', now()) + interval '1 day'"
+	case "week":
+		q += " and due_at >= date_trunc('week', now()) and due_at < date_trunc('week', now()) + interval '1 week'"
 	}
 	q += " order by created_at desc, id desc"
-	rows, err := a.db.Query(q, args...)
+
+	rows, err := a.db.Query(q, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var res []TaskDTO
 	for rows.Next() {
 		var id int64
@@ -148,7 +156,8 @@ func (a *App) AddTask(title, priority, dueISO string) (TaskDTO, error) {
 insert into tasks (user_id, title, priority, completed, created_at, due_at)
 values ($1, $2, $3, false, now(), $4)
 returning id, title, priority, completed, created_at, completed_at, due_at
-`, userID, strings.TrimSpace(title), priority, due).Scan(&id, &retTitle, &retPriority, &completed, &createdAt, &completedAt, &dueAt)
+`, userID, strings.TrimSpace(title), priority, due).
+		Scan(&id, &retTitle, &retPriority, &completed, &createdAt, &completedAt, &dueAt)
 	if err != nil {
 		return TaskDTO{}, err
 	}
@@ -179,6 +188,7 @@ func (a *App) ToggleTask(id int64) (TaskDTO, error) {
 		return TaskDTO{}, err
 	}
 	defer tx.Rollback()
+
 	var completed bool
 	if err := tx.QueryRow(`select completed from tasks where id=$1 and user_id=$2`, id, userID).Scan(&completed); err != nil {
 		return TaskDTO{}, err
@@ -192,21 +202,25 @@ func (a *App) ToggleTask(id int64) (TaskDTO, error) {
 			return TaskDTO{}, err
 		}
 	}
+
 	var retID int64
 	var title, priority string
 	var retCompleted bool
 	var createdAt time.Time
 	var completedAt sql.NullTime
 	var dueAt sql.NullTime
+
 	if err := tx.QueryRow(`
 select id, title, priority, completed, created_at, completed_at, due_at
 from tasks where id=$1 and user_id=$2
 `, id, userID).Scan(&retID, &title, &priority, &retCompleted, &createdAt, &completedAt, &dueAt); err != nil {
 		return TaskDTO{}, err
 	}
+
 	if err := tx.Commit(); err != nil {
 		return TaskDTO{}, err
 	}
+
 	return TaskDTO{
 		ID:        retID,
 		Title:     title,
@@ -229,7 +243,21 @@ from tasks where id=$1 and user_id=$2
 }
 
 func (a *App) DeleteTask(id int64) error {
-	_, err := a.db.Exec(`delete from tasks where id=$1 and user_id=$2`, id, userID)
+	res, err := runtime.MessageDialog(a.ctx, dialog.MessageDialog{
+		Type:          dialog.Question,
+		Title:         "Confirm deletion",
+		Message:       "Delete this task?",
+		Buttons:       []string{"Delete", "Cancel"},
+		DefaultButton: "Delete",
+		CancelButton:  "Cancel",
+	})
+	if err != nil {
+		return err
+	}
+	if res != "Delete" {
+		return nil
+	}
+	_, err = a.db.Exec(`delete from tasks where id=$1 and user_id=$2`, id, userID)
 	return err
 }
 
@@ -255,7 +283,8 @@ func (a *App) UpdateTask(id int64, title, priority, dueISO string) (TaskDTO, err
 	if err != nil {
 		return TaskDTO{}, err
 	}
-	_, err = a.db.Exec(`update tasks set title=$1, priority=$2, due_at=$3 where id=$4 and user_id=$5`, strings.TrimSpace(title), priority, due, id, userID)
+	_, err = a.db.Exec(`update tasks set title=$1, priority=$2, due_at=$3 where id=$4 and user_id=$5`,
+		strings.TrimSpace(title), priority, due, id, userID)
 	if err != nil {
 		return TaskDTO{}, err
 	}
