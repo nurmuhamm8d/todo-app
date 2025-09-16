@@ -1,0 +1,27 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "todo-app",
+  "outputfilename": "todo-app",
+  "frontend:dir": "../frontend",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "http://localhost:3000",
+  "wailsjsdir": "../frontend/src",
+  "assetdir": "../frontend/dist",
+  "debounceMS": 100,
+  "devserverurl": "http://localhost:3000",
+  "appargs": "",
+  "nsisType": "multiple",
+  "bindings": {
+    "output": "frontend/src/bindings"
+  },
+  "windows": {
+    "webviewIsolation": true,
+    "disableWindowIcon": false,
+    "disableFramelessWindowDecorations": false,
+    "webviewUserDataPath": "",
+    "zoomable": true,
+    "theme": "system"
+  }
+}

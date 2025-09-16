@@ -1,0 +1,12 @@
+{
+  "name": "todo-app",
+  "assetdir": "frontend/dist",
+  "wailsjsdir": "frontend/wailsjs",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev": "npm run dev",
+  "version": "2",
+  "outputfilename": "todo-app",
+  "debounceMS": 100,
+  "devserverurl": "http://localhost:34115"
+}

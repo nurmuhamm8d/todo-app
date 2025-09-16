@@ -1,0 +1,14 @@
+.app { min-height: 100vh; padding: 16px; }
+.container { max-width: 900px; margin: 0 auto; }
+.filters button.active { font-weight: 700; }
+.task-item { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #3333; }
+.task-content { display:flex; align-items:center; gap:8px; }
+.priority-badge { padding:2px 6px; border-radius:6px; font-size:12px; text-transform:capitalize; }
+.priority-high { background:#ffebee; }
+.priority-medium { background:#fff8e1; }
+.priority-low { background:#e8f5e9; }
+.empty-state { opacity:.7; padding:16px 0; }
+.task-form { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.task-input,.priority-select,.date-input { padding:8px; }
+.add-button,.clear-completed,.delete-button,.theme-toggle { padding:8px 12px; }
+.completed .task-title { text-decoration: line-through; opacity:.7; }
