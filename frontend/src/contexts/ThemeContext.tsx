@@ -1,71 +1,62 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 
-type Theme = 'light' | 'dark';
+type Theme = "light" | "dark";
 
-interface ThemeContextType {
+type Ctx = {
   theme: Theme;
-  toggleTheme: () => void;
-  isDark: boolean;
+  setTheme: (t: Theme) => void;
+  toggle: () => void;
+};
+
+function pickInitialTheme(): Theme {
+  const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+  if (saved === "light" || saved === "dark") return saved;
+  if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+    return "light";
+  }
+  return "dark";
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+export function applyInitialTheme(): void {
+  const t = pickInitialTheme();
+  if (t === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [isMounted, setIsMounted] = useState(false);
+const ThemeContext = createContext<Ctx>({
+  theme: "dark",
+  setTheme: () => {},
+  toggle: () => {},
+});
 
-  // Set theme from localStorage or system preference on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else if (prefersDark) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
-    }
-    
-    setIsMounted(true);
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, _setTheme] = useState<Theme>(pickInitialTheme());
+
+  const setTheme = useCallback((t: Theme) => {
+    _setTheme(t);
+    localStorage.setItem("theme", t);
   }, []);
 
-  // Apply theme to document element
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    const root = window.document.documentElement;
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    
-    // For Tailwind dark mode
-    if (theme === 'dark') {
-      root.classList.add('dark');
+  const toggle = useCallback(() => {
+    _setTheme(prev => (prev === "light" ? "dark" : "light"));
+    localStorage.setItem("theme", theme === "light" ? "dark" : "light");
+  }, [theme]);
+
+  useLayoutEffect(() => {
+    if (theme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
     } else {
-      root.classList.remove('dark');
+      document.documentElement.removeAttribute("data-theme");
     }
-  }, [theme, isMounted]);
+  }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+  const value = useMemo(() => ({ theme, setTheme, toggle }), [theme, setTheme, toggle]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
 
-  // Prevent theme flash on initial load
-  if (!isMounted) {
-    return null;
-  }
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
-
-export const useTheme = (): ThemeContextType => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};
+export function useTheme() {
+  return useContext(ThemeContext);
+}

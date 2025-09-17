@@ -6,14 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^18.2.0",
+    "@wailsio/runtime": "^2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-datepicker": "^4.24.0",
-    "react-dom": "^18.2.0"
+    "wailsjs": "file:./wailsjs"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.3.1",
@@ -21,6 +25,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.9",
     "typescript": "^5.6.2",
-    "vite": "^5.4.0"
+    "vite": "^5.4.20",
+    "vite-plugin-wasm": "^3.4.0"
   }
 }

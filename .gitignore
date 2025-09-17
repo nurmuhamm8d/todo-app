@@ -1,48 +1,38 @@
-# OS
+# frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/.cache/
+/frontend/.turbo/
+/frontend/.parcel-cache/
+/frontend/.eslintcache
+/frontend/wailsjs/
+
+# wails/build артефакты
+/build/
+/bin/
+
+# зависимости/логи
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# env
+.env
+*.env
+*.local
+/frontend/.env
+/backend/.env
+
+# IDE/OS
+.vscode/
+/.idea/
 .DS_Store
 Thumbs.db
 
-# Node/Vite
-node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-*.local
+# coverage
+/coverage/
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Env
-.env
-.env.*
-!.env.example
-
-# Wails/Go
-build/bin/
-build/cache/
-frontend/wailsjs/
-**/*.exe
-**/*.dll
-**/*.so
-**/*.dylib
-
-# Go artifacts
-bin/
-vendor/
+# go
+*.out
 *.test
-coverage.out
-
-# IDE
-.vscode/
-.idea/
-*.iml
-
-# System
-*.swp
-*.swo
-
-# Generated
-package-lock.json.md5
