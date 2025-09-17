@@ -36,3 +36,5 @@ Thumbs.db
 # go
 *.out
 *.test
+
+!docs/demo/*.mp4
